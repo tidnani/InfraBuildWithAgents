@@ -1,0 +1,504 @@
+name: Deploy Mission Critical Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev, staging, prod)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+permissions:
+  id-token: write   # Required for OIDC federated identity authentication
+  contents: read
+  pull-requests: write
+
+env:
+  TF_VERSION: '1.9.5'
+  ARM_USE_OIDC: 'true'
+
+jobs:
+  # ── Detect changed modules ──────────────────────────────────────────────────
+  detect-changes:
+    name: Detect Changed Modules
+    runs-on: ubuntu-latest
+    outputs:
+      networking: ${{ steps.filter.outputs.networking }}
+      monitoring: ${{ steps.filter.outputs.monitoring }}
+      key-vault: ${{ steps.filter.outputs.key-vault }}
+      sql-database: ${{ steps.filter.outputs.sql-database }}
+      redis-cache: ${{ steps.filter.outputs.redis-cache }}
+      app-service: ${{ steps.filter.outputs.app-service }}
+      front-door: ${{ steps.filter.outputs.front-door }}
+      root: ${{ steps.filter.outputs.root }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            networking:
+              - 'modules/networking/**'
+            monitoring:
+              - 'modules/monitoring/**'
+            key-vault:
+              - 'modules/key-vault/**'
+            sql-database:
+              - 'modules/sql-database/**'
+            redis-cache:
+              - 'modules/redis-cache/**'
+            app-service:
+              - 'modules/app-service/**'
+            front-door:
+              - 'modules/front-door/**'
+            root:
+              - 'main.tf'
+              - 'variables.tf'
+              - 'outputs.tf'
+              - 'versions.tf'
+
+  # ── Lint & validate ─────────────────────────────────────────────────────────
+  validate:
+    name: Lint & Validate
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Validate networking module
+        working-directory: modules/networking
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate monitoring module
+        working-directory: modules/monitoring
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate key-vault module
+        working-directory: modules/key-vault
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate sql-database module
+        working-directory: modules/sql-database
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate redis-cache module
+        working-directory: modules/redis-cache
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate app-service module
+        working-directory: modules/app-service
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate front-door module
+        working-directory: modules/front-door
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+  # ── Run native Terraform tests ──────────────────────────────────────────────
+  test:
+    name: Terraform Tests
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run networking tests
+        working-directory: modules/networking
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init -backend=false
+          terraform test -test-directory=../../tests/networking
+
+      - name: Run monitoring tests
+        working-directory: modules/monitoring
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init -backend=false
+          terraform test -test-directory=../../tests/monitoring
+
+      - name: Run key-vault tests
+        working-directory: modules/key-vault
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init -backend=false
+          terraform test -test-directory=../../tests/key-vault
+
+      - name: Run sql-database tests
+        working-directory: modules/sql-database
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init -backend=false
+          terraform test -test-directory=../../tests/sql-database
+
+      - name: Run redis-cache tests
+        working-directory: modules/redis-cache
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init -backend=false
+          terraform test -test-directory=../../tests/redis-cache
+
+      - name: Run app-service tests
+        working-directory: modules/app-service
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init -backend=false
+          terraform test -test-directory=../../tests/app-service
+
+      - name: Run front-door tests
+        working-directory: modules/front-door
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init -backend=false
+          terraform test -test-directory=../../tests/front-door
+
+  # ── Plan (PR only) ───────────────────────────────────────────────────────────
+  plan:
+    name: Terraform Plan (${{ matrix.environment }})
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        environment: [dev, staging]
+      fail-fast: false
+    environment: ${{ matrix.environment }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_BACKEND_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
+          TF_BACKEND_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}
+          TF_BACKEND_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${TF_BACKEND_RESOURCE_GROUP}" \
+            -backend-config="storage_account_name=${TF_BACKEND_STORAGE_ACCOUNT}" \
+            -backend-config="container_name=${TF_BACKEND_CONTAINER}" \
+            -backend-config="key=${{ matrix.environment }}.terraform.tfstate"
+
+      - name: Terraform Plan
+        id: plan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_environment: ${{ matrix.environment }}
+          TF_VAR_resource_group_name: ${{ secrets.RESOURCE_GROUP_NAME }}
+          TF_VAR_sql_admin_password: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          terraform plan \
+            -var-file="environments/${{ matrix.environment }}.tfvars" \
+            -out="${{ matrix.environment }}.tfplan" \
+            -detailed-exitcode \
+            -no-color 2>&1 | tee plan_output.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Post plan to PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const planOutput = fs.readFileSync('plan_output.txt', 'utf8');
+            const maxLength = 65000;
+            const truncated = planOutput.length > maxLength
+              ? planOutput.substring(0, maxLength) + '\n... (truncated)'
+              : planOutput;
+            const body = `## Terraform Plan — \`${{ matrix.environment }}\`\n\n<details><summary>Show Plan</summary>\n\n\`\`\`terraform\n${truncated}\n\`\`\`\n</details>`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail if plan error
+        if: steps.plan.outputs.exitcode == '1'
+        run: exit 1
+
+  # ── Deploy to dev ────────────────────────────────────────────────────────────
+  deploy-dev:
+    name: Deploy to dev
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: test
+    environment:
+      name: dev
+      url: https://${{ steps.outputs.outputs.hostname }}
+    outputs:
+      hostname: ${{ steps.outputs.outputs.hostname }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TF_BACKEND_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.TF_BACKEND_CONTAINER }}" \
+            -backend-config="key=dev.terraform.tfstate"
+
+      - name: Terraform Apply
+        id: apply
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_environment: dev
+          TF_VAR_resource_group_name: ${{ secrets.RESOURCE_GROUP_NAME }}
+          TF_VAR_sql_admin_password: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          terraform apply \
+            -var-file="environments/dev.tfvars" \
+            -auto-approve \
+            -no-color
+
+      - name: Capture outputs
+        id: outputs
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          HOSTNAME=$(terraform output -raw front_door_endpoint_hostname)
+          echo "hostname=${HOSTNAME}" >> $GITHUB_OUTPUT
+
+  # ── Deploy to staging ─────────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy to staging
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    environment:
+      name: staging
+      url: https://${{ steps.outputs.outputs.hostname }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TF_BACKEND_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.TF_BACKEND_CONTAINER }}" \
+            -backend-config="key=staging.terraform.tfstate"
+
+      - name: Terraform Apply
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_environment: staging
+          TF_VAR_resource_group_name: ${{ secrets.RESOURCE_GROUP_NAME }}
+          TF_VAR_sql_admin_password: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          terraform apply \
+            -var-file="environments/staging.tfvars" \
+            -auto-approve \
+            -no-color
+
+      - name: Capture outputs
+        id: outputs
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          HOSTNAME=$(terraform output -raw front_door_endpoint_hostname)
+          echo "hostname=${HOSTNAME}" >> $GITHUB_OUTPUT
+
+  # ── Deploy to prod ────────────────────────────────────────────────────────────
+  deploy-prod:
+    name: Deploy to prod
+    if: startsWith(github.ref, 'refs/heads/release/')
+    runs-on: ubuntu-latest
+    needs: test
+    environment:
+      name: prod
+      url: https://${{ steps.outputs.outputs.hostname }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ secrets.TF_BACKEND_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ secrets.TF_BACKEND_CONTAINER }}" \
+            -backend-config="key=prod.terraform.tfstate"
+
+      - name: Terraform Plan (prod)
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_environment: prod
+          TF_VAR_resource_group_name: ${{ secrets.RESOURCE_GROUP_NAME }}
+          TF_VAR_sql_admin_password: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          terraform plan \
+            -var-file="environments/prod.tfvars" \
+            -out=prod.tfplan \
+            -no-color
+
+      - name: Terraform Apply (prod)
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: terraform apply prod.tfplan -no-color
+
+      - name: Capture outputs
+        id: outputs
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          HOSTNAME=$(terraform output -raw front_door_endpoint_hostname)
+          echo "hostname=${HOSTNAME}" >> $GITHUB_OUTPUT
