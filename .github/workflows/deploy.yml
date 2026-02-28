@@ -161,7 +161,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           terraform init -backend=false
-          terraform test -filter=../../tests/networking/networking_test.tftest.hcl
+          terraform test -test-directory=../../tests/networking
 
       - name: Run monitoring tests
         working-directory: modules/monitoring
@@ -171,7 +171,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           terraform init -backend=false
-          terraform test -filter=../../tests/monitoring/monitoring_test.tftest.hcl
+          terraform test -test-directory=../../tests/monitoring
 
       - name: Run key-vault tests
         working-directory: modules/key-vault
@@ -181,7 +181,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           terraform init -backend=false
-          terraform test -filter=../../tests/key-vault/key_vault_test.tftest.hcl
+          terraform test -test-directory=../../tests/key-vault
 
       - name: Run sql-database tests
         working-directory: modules/sql-database
@@ -191,7 +191,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           terraform init -backend=false
-          terraform test -filter=../../tests/sql-database/sql_database_test.tftest.hcl
+          terraform test -test-directory=../../tests/sql-database
 
       - name: Run redis-cache tests
         working-directory: modules/redis-cache
@@ -201,7 +201,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           terraform init -backend=false
-          terraform test -filter=../../tests/redis-cache/redis_cache_test.tftest.hcl
+          terraform test -test-directory=../../tests/redis-cache
 
       - name: Run app-service tests
         working-directory: modules/app-service
@@ -211,7 +211,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           terraform init -backend=false
-          terraform test -filter=../../tests/app-service/app_service_test.tftest.hcl
+          terraform test -test-directory=../../tests/app-service
 
       - name: Run front-door tests
         working-directory: modules/front-door
@@ -221,7 +221,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           terraform init -backend=false
-          terraform test -filter=../../tests/front-door/front_door_test.tftest.hcl
+          terraform test -test-directory=../../tests/front-door
 
   # ── Plan (PR only) ───────────────────────────────────────────────────────────
   plan:

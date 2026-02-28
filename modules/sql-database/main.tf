@@ -166,7 +166,7 @@ resource "azurerm_monitor_diagnostic_setting" "sql_db" {
 
 resource "azurerm_key_vault_secret" "sql_connection_string" {
   name         = "sql-connection-string"
-  value        = "Server=tcp:${azurerm_mssql_failover_group.main.name}${azurerm_mssql_server.primary.fully_qualified_domain_name},1433;Database=${azurerm_mssql_database.main.name};User ID=${var.admin_login};Password=${var.admin_password};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  value        = "Server=tcp:${azurerm_mssql_failover_group.main.name}.database.windows.net,1433;Database=${azurerm_mssql_database.main.name};User ID=${var.admin_login};Password=${var.admin_password};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
   key_vault_id = var.key_vault_id
   tags         = var.tags
 }

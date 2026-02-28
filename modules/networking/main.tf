@@ -1,8 +1,8 @@
 locals {
   # Subnet address prefixes carved from the VNet address space
-  app_service_subnet_prefix      = cidrsubnet(var.vnet_address_space[0], 8, 0)  # /24
-  private_endpoint_subnet_prefix = cidrsubnet(var.vnet_address_space[0], 8, 1)  # /24
-  bastion_subnet_prefix          = cidrsubnet(var.vnet_address_space[0], 11, 8) # /27 (required min for Bastion)
+  app_service_subnet_prefix      = cidrsubnet(var.vnet_address_space[0], 8, 0)   # /24
+  private_endpoint_subnet_prefix = cidrsubnet(var.vnet_address_space[0], 8, 1)   # /24
+  bastion_subnet_prefix          = cidrsubnet(var.vnet_address_space[0], 11, 16) # /27 at 10.0.2.0/27 – avoids overlap with /24 subnets at index 0 and 1
 }
 
 resource "azurerm_virtual_network" "main" {

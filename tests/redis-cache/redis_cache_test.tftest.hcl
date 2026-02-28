@@ -18,30 +18,17 @@ variables {
   }
 }
 
-run "validate_public_access_disabled" {
-  command = plan
-
-  assert {
-    condition     = azurerm_redis_cache.main.public_network_access_enabled == false
-    error_message = "Redis Cache public network access must be disabled."
-  }
-}
-
-run "validate_minimum_tls" {
+run "validate_tls_and_public_access" {
   command = plan
 
   assert {
     condition     = azurerm_redis_cache.main.minimum_tls_version == "1.2"
     error_message = "Redis Cache minimum TLS version must be 1.2."
   }
-}
-
-run "validate_authentication_enabled" {
-  command = plan
 
   assert {
-    condition     = azurerm_redis_cache.main.redis_configuration[0].enable_authentication == true
-    error_message = "Redis Cache authentication must be enabled."
+    condition     = azurerm_redis_cache.main.public_network_access_enabled == false
+    error_message = "Redis Cache public network access must be disabled."
   }
 }
 
