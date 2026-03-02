@@ -73,7 +73,10 @@ resource "azurerm_linux_web_app" "this" {
     failed_request_tracing  = true
 
     http_logs {
-      retention_in_days = var.http_logs_retention_days
+      file_system {
+        retention_in_days = var.http_logs_retention_days
+        retention_in_mb   = 35
+      }
     }
   }
 
@@ -165,7 +168,7 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
     category = "AppServiceAuditLogs"
   }
 
-  metric {
+  enabled_metric {
     category = "AllMetrics"
   }
 }

@@ -21,13 +21,11 @@ resource "azurerm_redis_cache" "this" {
   capacity                      = var.capacity
   family                        = var.family
   sku_name                      = var.sku_name
-  enable_non_ssl_port           = var.enable_non_ssl_port
   minimum_tls_version           = var.minimum_tls_version
   public_network_access_enabled = false
   tags                          = local.tags
 
   redis_configuration {
-    enable_authentication         = true
     maxmemory_policy              = var.maxmemory_policy
     rdb_backup_enabled            = var.rdb_backup_enabled
     rdb_backup_frequency          = var.rdb_backup_enabled ? var.rdb_backup_frequency : null
@@ -54,7 +52,7 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
     category = "ConnectedClientList"
   }
 
-  metric {
+  enabled_metric {
     category = "AllMetrics"
   }
 }

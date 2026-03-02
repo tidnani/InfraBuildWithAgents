@@ -18,6 +18,20 @@ locals {
     "redis"    = "privatelink.redis.cache.windows.net"
     "keyvault" = "privatelink.vaultcore.azure.net"
   }
+
+  # Map subresource names to the internal DNS zone key
+  subresource_to_dns_key = {
+    "sqlServer"  = "sql"
+    "redisCache" = "redis"
+    "vault"      = "keyvault"
+  }
+
+  # Map of DNS zone key -> zone ID (only populated when create_dns_zones = true)
+  internal_dns_zone_ids = var.create_dns_zones ? {
+    "sql"      = azurerm_private_dns_zone.sql[0].id
+    "redis"    = azurerm_private_dns_zone.redis[0].id
+    "keyvault" = azurerm_private_dns_zone.keyvault[0].id
+  } : {}
 }
 
 resource "azurerm_private_endpoint" "this" {
@@ -37,10 +51,13 @@ resource "azurerm_private_endpoint" "this" {
   }
 
   dynamic "private_dns_zone_group" {
-    for_each = length(each.value.private_dns_zone_ids) > 0 ? [1] : []
+    for_each = (var.create_dns_zones || length(each.value.private_dns_zone_ids) > 0) ? [1] : []
     content {
-      name                 = "${each.value.name}-dns-group"
-      private_dns_zone_ids = each.value.private_dns_zone_ids
+      name = "${each.value.name}-dns-group"
+      private_dns_zone_ids = var.create_dns_zones ? compact([
+        for sr in each.value.subresource_names :
+        lookup(local.internal_dns_zone_ids, lookup(local.subresource_to_dns_key, sr, ""), "")
+      ]) : each.value.private_dns_zone_ids
     }
   }
 }

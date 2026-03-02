@@ -110,7 +110,7 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
     category = "Errors"
   }
 
-  metric {
+  enabled_metric {
     category = "Basic"
   }
 }

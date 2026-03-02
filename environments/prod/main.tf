@@ -74,7 +74,7 @@ module "key_vault" {
 
   network_acls = {
     default_action             = "Deny"
-    bypass                     = ["AzureServices"]
+    bypass                     = "AzureServices"
     ip_rules                   = []
     virtual_network_subnet_ids = [module.networking.subnet_ids["app_service_subnet"]]
   }
@@ -152,21 +152,18 @@ module "private_endpoints" {
       subnet_id                      = module.networking.subnet_ids["private_endpoint_subnet"]
       private_connection_resource_id = module.sql_database.server_id
       subresource_names              = ["sqlServer"]
-      private_dns_zone_ids           = [module.private_endpoints.sql_private_dns_zone_id]
     }
     redis = {
       name                           = "pe-redis-${local.name_prefix}-001"
       subnet_id                      = module.networking.subnet_ids["private_endpoint_subnet"]
       private_connection_resource_id = module.redis_cache.id
       subresource_names              = ["redisCache"]
-      private_dns_zone_ids           = [module.private_endpoints.redis_private_dns_zone_id]
     }
     keyvault = {
       name                           = "pe-kv-${local.name_prefix}-001"
       subnet_id                      = module.networking.subnet_ids["private_endpoint_subnet"]
       private_connection_resource_id = module.key_vault.id
       subresource_names              = ["vault"]
-      private_dns_zone_ids           = [module.private_endpoints.keyvault_private_dns_zone_id]
     }
   }
 }

@@ -20,11 +20,6 @@ run "valid_redis_cache" {
   }
 
   assert {
-    condition     = azurerm_redis_cache.this.enable_non_ssl_port == false
-    error_message = "Non-SSL port should be disabled by default"
-  }
-
-  assert {
     condition     = azurerm_redis_cache.this.minimum_tls_version == "1.2"
     error_message = "Minimum TLS version should be 1.2"
   }

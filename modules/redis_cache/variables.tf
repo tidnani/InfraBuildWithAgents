@@ -41,12 +41,6 @@ variable "capacity" {
   default     = 1
 }
 
-variable "enable_non_ssl_port" {
-  description = "Whether to enable the non-SSL port (6379). Should be disabled for security."
-  type        = bool
-  default     = false
-}
-
 variable "minimum_tls_version" {
   description = "The minimum TLS version. Recommended: 1.2"
   type        = string
