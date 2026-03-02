@@ -70,6 +70,8 @@ resource "azurerm_mssql_server_security_alert_policy" "this" {
 }
 
 resource "azurerm_mssql_server_vulnerability_assessment" "this" {
+  count = var.vulnerability_assessment_storage_container_path != "" ? 1 : 0
+
   server_security_alert_policy_id = azurerm_mssql_server_security_alert_policy.this.id
   storage_container_path          = var.vulnerability_assessment_storage_container_path
 

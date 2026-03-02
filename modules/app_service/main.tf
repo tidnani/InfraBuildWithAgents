@@ -73,7 +73,7 @@ resource "azurerm_linux_web_app" "this" {
     failed_request_tracing  = true
 
     http_logs {
-      retention_in_days = 7
+      retention_in_days = var.http_logs_retention_days
     }
   }
 

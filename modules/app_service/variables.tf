@@ -94,6 +94,12 @@ variable "autoscale_default_capacity" {
   default     = 3
 }
 
+variable "http_logs_retention_days" {
+  description = "The number of days to retain HTTP logs for the App Service."
+  type        = number
+  default     = 7
+}
+
 variable "tags" {
   description = "A map of tags to assign to all resources."
   type        = map(string)

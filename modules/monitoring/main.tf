@@ -52,6 +52,8 @@ resource "azurerm_monitor_action_group" "this" {
 }
 
 resource "azurerm_monitor_metric_alert" "high_cpu" {
+  count = length(var.alert_scope_ids) > 0 ? 1 : 0
+
   name                = "alert-high-cpu-${var.workspace_name}"
   resource_group_name = var.resource_group_name
   scopes              = var.alert_scope_ids
@@ -75,6 +77,8 @@ resource "azurerm_monitor_metric_alert" "high_cpu" {
 }
 
 resource "azurerm_monitor_metric_alert" "high_memory" {
+  count = length(var.alert_scope_ids) > 0 ? 1 : 0
+
   name                = "alert-high-memory-${var.workspace_name}"
   resource_group_name = var.resource_group_name
   scopes              = var.alert_scope_ids
@@ -98,6 +102,8 @@ resource "azurerm_monitor_metric_alert" "high_memory" {
 }
 
 resource "azurerm_monitor_metric_alert" "http_errors" {
+  count = length(var.alert_scope_ids) > 0 ? 1 : 0
+
   name                = "alert-http-errors-${var.workspace_name}"
   resource_group_name = var.resource_group_name
   scopes              = var.alert_scope_ids
