@@ -1,0 +1,23 @@
+# Copy this file to terraform.tfvars and fill in the values.
+# DO NOT commit terraform.tfvars to version control.
+
+subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+tenant_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+location       = "eastus"
+location_short = "eus"
+project_name   = "myapp"
+
+owner_tag       = "platform-team"
+cost_center_tag = "engineering"
+
+vnet_address_space             = "10.1.0.0/16"
+app_service_subnet_prefix      = "10.1.1.0/24"
+private_endpoint_subnet_prefix = "10.1.2.0/24"
+management_subnet_prefix       = "10.1.3.0/24"
+
+sql_admin_login = "sqladmin"
+# sql_admin_password = "<set via environment variable TF_VAR_sql_admin_password>"
+
+azuread_admin_login     = "admin@example.com"
+azuread_admin_object_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
