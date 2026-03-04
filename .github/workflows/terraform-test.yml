@@ -1,0 +1,94 @@
+name: Terratest
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "modules/**"
+      - "tests/**"
+      - ".github/workflows/terraform-test.yml"
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+env:
+  TF_VERSION: "1.9.8"
+  GO_VERSION: "1.22"
+
+jobs:
+  terratest:
+    name: Run Terratest (${{ matrix.test }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - TestResourceGroupPlan
+          - TestResourceGroupValidation
+          - TestNetworkingPlan
+          - TestNetworkingSubnetCIDRs
+          - TestMonitoringPlan
+          - TestMonitoringEmailValidation
+          - TestKeyVaultPlan
+          - TestKeyVaultNameValidation
+          - TestAppServicePlan
+          - TestAppServiceWithFrontDoorHeader
+          - TestFrontDoorPlan
+          - TestFrontDoorMultipleOrigins
+          - TestFrontDoorEmptyOriginsValidation
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: tests/go.sum
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Go Module Download
+        working-directory: tests
+        run: go mod download
+
+      - name: Run Terratest — ${{ matrix.test }}
+        working-directory: tests
+        run: go test -v -timeout 15m -run "${{ matrix.test }}" ./...
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: "true"
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: terratest
+    if: always()
+    steps:
+      - name: Evaluate Test Results
+        run: |
+          if [[ "${{ needs.terratest.result }}" == "success" ]]; then
+            echo "All Terratest tests passed successfully."
+          else
+            echo "One or more Terratest tests failed. Review the job logs above."
+            exit 1
+          fi

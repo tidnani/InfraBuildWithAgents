@@ -1,0 +1,28 @@
+# Copy this file to terraform.tfvars and populate with your values.
+# NEVER commit terraform.tfvars to source control if it contains sensitive values.
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+tenant_id       = "00000000-0000-0000-0000-000000000000"
+
+prefix   = "myapp"
+location = "eastus"
+
+vnet_address_space             = ["10.10.0.0/16"]
+app_service_subnet_prefix      = "10.10.1.0/24"
+private_endpoint_subnet_prefix = "10.10.2.0/24"
+
+alert_email        = "ops-team@example.com"
+health_check_path  = "/health"
+http_5xx_threshold = 10
+
+# Populate this after the initial deployment by running:
+#   terraform output -raw front_door_profile_id
+# Then re-run terraform apply to enforce Front Door header restrictions on App Service.
+front_door_profile_id = ""
+
+tags = {
+  environment  = "dev"
+  managed-by   = "terraform"
+  project      = "mission-critical-app"
+  cost-center  = "engineering"
+}
