@@ -1,0 +1,28 @@
+# Terraform local state and cache
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.binary
+tfplan
+tfplan.binary
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform variable files with secrets
+*.tfvars
+!*.tfvars.example
+
+# Go build artifacts
+tests/*.test
+tests/vendor/
+
+# Editor artifacts
+.DS_Store
+*.swp
+*.swo
