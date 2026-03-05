@@ -1,0 +1,41 @@
+# Terraform state files
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Terraform plan files
+tfplan
+*.tfplan
+
+# Terraform local plugin/module cache directories (NOT the lock file)
+.terraform/
+
+# Terraform variable override files
+*.auto.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform crash log files
+crash.log
+crash.*.log
+
+# Terraform CLI configuration files
+.terraformrc
+terraform.rc
+
+# Go build artifacts
+tests/vendor/
+tests/*.test
+tests/test-results/
+
+# Environment-specific variable files (may contain secrets)
+# environments/**/secrets.tfvars
+
+# Editor and OS files
+.DS_Store
+.idea/
+*.swp
+*.swo
+*~
